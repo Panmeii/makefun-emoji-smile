@@ -51,5 +51,17 @@ if (clusters.length !== 1) refuse(`expected exactly one grapheme cluster, found 
 // And that cluster must be a pictograph, not a letter, digit or mark.
 if (!/\p{Extended_Pictographic}/u.test(onDisk)) refuse("the single character is not an emoji");
 if (/[\p{L}\p{N}]/u.test(onDisk)) refuse("the entry contains a letter or digit");
+// Byte-level belt and braces: the sunflower is one code point
+// (U+1F33B), which is exactly four UTF-8 bytes and nothing else — no
+// variation selector quietly turning it into a different presentation,
+// no byte-order mark, no trailing newline.
+const rawBytes = readFileSync(target);
+if (!rawBytes.equals(Buffer.from(EMOJI, "utf8"))) {
+  refuse(`file holds ${rawBytes.length} bytes, not the emoji's exact ${Buffer.byteLength(EMOJI)}`);
+}
+if (codePoints[0].codePointAt(0) !== 0x1f33b) refuse("the code point is not the sunflower");
+if (onDisk.includes("\uFE0F") || onDisk.includes("\u200D")) {
+  refuse("the emoji carries a variation selector or joiner, so it is not the plain sunflower");
+}
 
 console.log(`wrote ${target}: "${onDisk}" (${codePoints.length} code point, one grapheme, gate ok)`);
